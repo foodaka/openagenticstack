@@ -1,0 +1,59 @@
+# openagenticstack: Bugpatrol on every PR. Copy to .github/workflows/bugpatrol.yml
+# (Bugpatrol expects that exact path).
+#
+# Secrets: ANTHROPIC_API_KEY (or OPENROUTER_API_KEY / AI_GATEWAY_API_KEY, to
+# match agents.*.use in .bugpatrol/bugpatrol.yml), plus every name listed in
+# app.secrets.
+name: Bugpatrol
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: bugpatrol-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  # Deterministic gate. Web apps only. The only job here that can block a merge.
+  # Delete this job for iOS/Android/API-only repos.
+  gate:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: PLAYWRIGHT_SKIP_BROWSER_GC=1 npx -y -p bugpatrol@latest playwright install --with-deps chromium
+      - run: npx -y bugpatrol@latest run --no-models
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bugpatrol-gate
+          path: .bugpatrol/runs/
+          if-no-files-found: ignore
+
+  # Agent review. Comments on the PR with findings and screenshots. Never blocks
+  # unless agents.review.block is true.
+  review:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest   # iOS: a self-hosted Mac with a booted simulator
+    permissions:
+      contents: write        # screenshots go to the bugpatrol-assets branch
+      pull-requests: write
+      checks: write          # only used with agents.review.block
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # Pin a full tag (for example @v0.2.0) once you've picked a version.
+      - uses: agent-labs-dev/bugpatrol@v0
+        with:
+          claims: 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # TEST_EMAIL: ${{ secrets.TEST_EMAIL }}
+          # TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}

@@ -1,0 +1,43 @@
+# openagenticstack starter for a Next.js + Supabase app. Start from `npx bugpatrol init`,
+# then copy the parts you need from here. Every TODO needs a real value.
+version: 1
+
+app:
+  platform: web
+  source: .
+  setup:
+    # TODO: pick a port no other project on this machine uses.
+    - run: npm run dev -- --port 3010
+      background: true
+      readyWhen: 'Ready in|ready on|Local:'
+      timeoutMs: 180000
+  connect:
+    url: http://localhost:3010
+    loadTimeoutMs: 120000
+    deny:
+      - 'POST /api/stripe/**'        # TODO: your checkout / payment routes
+      - 'POST /api/whatsapp/**'      # TODO: anything that messages real people
+  instructions: .bugpatrol/instructions.md
+  secrets: [TEST_EMAIL, TEST_PASSWORD]
+
+agents:
+  explorer:
+    maxSteps: 150
+    budgetUsd: 3
+    # Locally you can use `use: claude` (the CLI on PATH). CI has no CLI, so
+    # the model runtime is the default here.
+    use: { runtime: model, via: anthropic, model: claude-sonnet-5 }
+  judge:
+    use: { runtime: model, via: anthropic, model: claude-sonnet-5 }
+  fixer:
+    enabled: false
+  github:
+    enabled: false
+  review:
+    name: web
+    claims: true
+    block: false
+    budgetUsd: 2
+  memory:
+    enabled: true
+  checks: [usability/contrast, usability/tap-target]

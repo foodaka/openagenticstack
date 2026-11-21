@@ -1,0 +1,30 @@
+# openagenticstack starter for an iOS app (Swift or React Native/Expo). Needs macOS,
+# Xcode, a booted simulator, and Maestro. CI needs a self-hosted Mac.
+# Bugpatrol's examples/expo-app shows a React Native setup.
+version: 1
+
+app:
+  platform: ios
+  source: .
+  connect:
+    appId: com.example.app            # TODO: bundle id
+    # device: iPhone 17 Pro           # optional: simulator name
+  instructions: .bugpatrol/instructions.md
+  secrets: [TEST_EMAIL, TEST_PASSWORD]
+  # Mobile apps talk to their backend directly, so read-only mode needs a proxy.
+  # readOnly:
+  #   proxy:
+  #     API_URL: https://staging-api.example.com
+
+agents:
+  explorer:
+    maxSteps: 120
+    budgetUsd: 3
+    use: { runtime: model, via: anthropic, model: claude-sonnet-5 }
+  judge:
+    use: { runtime: model, via: anthropic, model: claude-sonnet-5 }
+  fixer:
+    enabled: false
+  review:
+    name: ios
+    claims: true
